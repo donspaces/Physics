@@ -10,13 +10,9 @@ UCLASS()
 class PHYSICS_API AExplodedBalls : public AActor
 {
 	GENERATED_BODY()
+	public:
 		UPROPERTY(VisibleAnywhere)
 			UStaticMeshComponent* Ball;
-		
-	UPROPERTY(EditAnywhere, Category = "Force")
-		float explode_strength = 2000.0f;
-	UPROPERTY(EditAnywhere, Category = "Force")
-		float impulse = 2000.0f;
 
 	float fps = 0.0f;
 public:	
@@ -30,6 +26,6 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	UFUNCTION()
-		AExplodedBalls* clone(FVector Location, FRotator Rotation = FRotator(0));
 };
+
+
