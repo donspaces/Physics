@@ -36,6 +36,7 @@ public:
 	FVector MyLocation;
 	FRotator MyRotation;
 
+
 public:	
 	// Sets default values for this actor's properties
 	ABallGenerator();

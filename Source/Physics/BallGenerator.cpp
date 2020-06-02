@@ -5,7 +5,10 @@
 #include "Components/StaticMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Math/UnrealMathUtility.h"
+
 #include "Kismet/GameplayStatics.h"
+
+
 
 // Sets default values
 ABallGenerator::ABallGenerator()
@@ -26,6 +29,7 @@ ABallGenerator::ABallGenerator()
 void ABallGenerator::BeginPlay()
 {
 	Super::BeginPlay();
+
 	UGameplayStatics::GetAllActorsWithTag(GetWorld(), TEXT("Balls"), BallGen);
 	BallGen.Add(nullptr);
 	Balls = BallGen[0];
@@ -40,6 +44,7 @@ void ABallGenerator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	fps += 1.0f;
+
 	AExplodedBalls* NewBall = nullptr;
 	if (int(fps) % period == 0 && Balls != nullptr)
 	{
@@ -54,6 +59,7 @@ AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location, FR
 
 	AExplodedBalls* OtherBall = nullptr;
 
+
 	Parameters.Template = Actortype;
 
 	Parameters.Owner = GetOwner();
@@ -62,6 +68,7 @@ AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location, FR
 
 	if (IsValid(World))
 	{
+
 		OtherBall = World->SpawnActor<class AExplodedBalls>(Actortype->GetClass(), Location, Rotation, Parameters);
 
 		UE_LOG(LogTemp, Log, TEXT("%s had been created!"), *OtherBall->GetName());
@@ -83,6 +90,7 @@ AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location, FR
 
 	return OtherBall;
 }
+
 
 void ABallGenerator::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -128,3 +136,4 @@ void ABallGenerator::Escape()
 	FGenericPlatformMisc::RequestExit(false);
 	UE_LOG(LogTemp, Log, TEXT("Exit!"));
 }
+
