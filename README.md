@@ -12,7 +12,4 @@ D - Move Right
 Q - Turn Left
 E - Turn Right
 
-# Intermediate Version 1.7.12 (Delete right after 2 commits)
-Add the big canon model. 
-
-This is an intermedite version.
+# Release 1.7.16
