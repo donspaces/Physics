@@ -1,4 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+/*
+@Project: Physics
+@Owner: Donspaces
+Date: Jun 2th, 2020 11:59 PM
+*/
 
 #pragma once
 
@@ -15,6 +19,7 @@ class PHYSICS_API ABallGenerator : public APawn
 	GENERATED_BODY()
 		UPROPERTY(VisibleAnywhere)
 			UStaticMeshComponent* Generator;
+
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impulse")
 		float impulse = 2000.0f;
@@ -35,7 +40,6 @@ public:
 
 	FVector MyLocation;
 	FRotator MyRotation;
-
 
 public:	
 	// Sets default values for this actor's properties
@@ -58,7 +62,12 @@ public:
 	void Move_Right(float AxisValue);
 	void Turn_Left(float AxisValue);
 	void Turn_Right(float AxisValue);
+	void Increase_Impulse(float AxisValue);
+	void Decrease_Impulse(float AxisValue);
+	void Increase_Period();
+	void Decrease_Period();
 
 	void Escape();
 	
 };
+

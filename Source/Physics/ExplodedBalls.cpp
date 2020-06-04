@@ -1,4 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+/*
+@Project: Physics
+@Owner: Donspaces
+Date: Jun 2th, 2020 11:59 PM
+*/
 
 
 #include "ExplodedBalls.h"
@@ -39,3 +43,4 @@ void AExplodedBalls::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	fps += 1.0f;
 }
+
