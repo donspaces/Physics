@@ -1,4 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+/*
+@Project: Physics
+@Owner: Donspaces
+Date: Jun 4th, 2020 2:12 PM
+*/
 
 #pragma once
 
@@ -27,5 +31,3 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 };
-
-
