@@ -228,3 +228,4 @@ void ABallGenerator::Escape()
 	FGenericPlatformMisc::RequestExit(false);
 	UE_LOG(LogTemp, Log, TEXT("Exit!"));
 }
+
