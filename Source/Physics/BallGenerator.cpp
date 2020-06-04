@@ -1,15 +1,17 @@
 /*
 @Project: Physics
 @Owner: Donspaces
-Date: Jun 2th, 2020 11:59 PM
+Date: Jun 4th, 2020 2:12 PM
 */
 
 
 #include "BallGenerator.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/BoxComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Math/UnrealMathUtility.h"
 #include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "Engine/Engine.h"
 
 // Sets default values
@@ -17,16 +19,41 @@ ABallGenerator::ABallGenerator()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	Box = CreateDefaultSubobject<UBoxComponent>(TEXT("Box Collider"));
+	Box->SetBoxExtent(FVector(72.0f, 128.0f, 72.0f));
+	Box->SetCollisionProfileName(TEXT("Pawn"));
+	RootComponent = Box;
+
 	Generator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Generator"));
 	Generator->SetupAttachment(RootComponent);
+	AutoPossessPlayer = EAutoReceiveInput::Player0;
+	bUseControllerRotationYaw = true;
+
+	Exploded = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Exploded"));
+	Exploded->SetupAttachment(Generator);
+	Exploded->bAutoActivate = false;
+	Exploded->SetRelativeLocation(-GetActorRightVector() * 240.0f);
+
+	static ConstructorHelpers::FObjectFinder<UParticleSystem> ExplodedParticles(TEXT("/Game/StarterContent/Particles/P_Explosion.P_Explosion"));
+	if (ExplodedParticles.Succeeded())
+	{
+		Exploded->SetTemplate(ExplodedParticles.Object);
+
+	}
 	
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Game/Meshes/Canon.Canon"));
 	if (CubeMesh.Succeeded())
 	{
 		Generator->SetStaticMesh(CubeMesh.Object);
 		Generator->SetRelativeScale3D(FVector(0.5f));
+		Generator->RelativeLocation.Z = -71.0f;
 		Generator->SetWorldRotation(FRotator(0, 180.0f, 0));
 	}
+
+	MovementComponent = CreateDefaultSubobject<UColliderMovementComponent>(TEXT("Movement Component"));
+	MovementComponent->UpdatedComponent = RootComponent;
+
 }
 
 // Called when the game starts or when spawned
@@ -36,9 +63,8 @@ void ABallGenerator::BeginPlay()
 	UGameplayStatics::GetAllActorsWithTag(GetWorld(), TEXT("Balls"), BallGen);
 	BallGen.Add(nullptr);
 	Balls = BallGen[0];
-	MyLocation = Generator->GetRelativeLocation();
-	MyRotation = Generator->GetRelativeRotation();
-	Balls->SetActorLocation(MyLocation);
+	MyLocation = GetActorLocation();
+	MyRotation = GetActorRotation();
 	Balls->SetActorHiddenInGame(true);
 
 	GEngine->AddOnScreenDebugMessage(0, MAX_FLT, FColor::Green, FString::Printf(TEXT("Impulse:%f"), impulse));
@@ -53,26 +79,25 @@ void ABallGenerator::Tick(float DeltaTime)
 	AExplodedBalls* NewBall = nullptr;
 	if (int(fps) % period == 0 && Balls != nullptr)
 	{
-		NewBall = generate(Balls, FVector(-200 * FMath::Sin(-MyRotation.Yaw / 180 * PI), -200 * FMath::Cos(-MyRotation.Yaw / 180 * PI), 0));
-		NewBall->Ball->AddImpulse(FVector(-impulse * FMath::Sin(-MyRotation.Yaw / 180 * PI), -impulse * FMath::Cos(-MyRotation.Yaw / 180 * PI), 0));
+		if (Exploded && Exploded->Template)
+		{
+			Exploded->ToggleActive();
+		}
+		NewBall = generate(Balls, MyLocation * FVector(1, 1, 0) + GetActorRightVector() * 200.0f);
+		NewBall->Ball->AddImpulse(GetActorRightVector() * impulse * 200.0f);
 	}
 }
 
 AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location, FRotator Rotation)
 {
-	FActorSpawnParameters Parameters;
 
 	AExplodedBalls* OtherBall = nullptr;
-
-	Parameters.Template = Actortype;
-
-	Parameters.Owner = GetOwner();
 
 	UWorld* World = GetWorld();
 
 	if (IsValid(World))
 	{
-		OtherBall = World->SpawnActor<class AExplodedBalls>(Actortype->GetClass(), Location, Rotation, Parameters);
+		OtherBall = World->SpawnActor<class AExplodedBalls>(Actortype->GetClass(), Location, Rotation);
 
 		UE_LOG(LogTemp, Log, TEXT("%s had been created!"), *OtherBall->GetName());
 
@@ -92,6 +117,12 @@ AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location, FR
 
 
 	return OtherBall;
+}
+
+UPawnMovementComponent* ABallGenerator::GetMovementComponent() const
+{
+	
+	return MovementComponent;
 }
 
 void ABallGenerator::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -117,31 +148,37 @@ void ABallGenerator::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 void ABallGenerator::Move_Foward(float AxisValue)
 {
 	//Make My pawn moves along the X axis
-	Generator->AddRelativeLocation(FVector(AxisValue * move, 0, 0));
-	MyLocation = Generator->GetRelativeLocation();
-	Balls->SetActorLocation(MyLocation);
+	if (MovementComponent && MovementComponent->UpdatedComponent == RootComponent)
+	{
+		MovementComponent->AddInputVector(FVector::ForwardVector * AxisValue * move);
+	}
+
+	MyLocation = GetActorLocation();
 }
 
 void ABallGenerator::Move_Right(float AxisValue)
 {
 	//Make My pawn moves along the Y axis
-	Generator->AddRelativeLocation(FVector(0, AxisValue * move, 0));
-	MyLocation = Generator->GetRelativeLocation();
-	Balls->SetActorLocation(MyLocation);
+	if (MovementComponent && MovementComponent->UpdatedComponent == RootComponent)
+	{
+		MovementComponent->AddInputVector(FVector::RightVector * AxisValue * move);
+	}
+
+	MyLocation = GetActorLocation();
 }
 
 void ABallGenerator::Turn_Right(float AxisValue)
 {
 	//Make My pawn turns
 	AddControllerYawInput(AxisValue * rotate);
-	MyRotation = Generator->GetRelativeRotation();
+	MyRotation = GetActorRotation();
 }
 
 void ABallGenerator::Increase_Impulse(float AxisValue)
 {
 	if (impulse < 60000)
 	{
-		impulse += AxisValue * 200.0f;
+		impulse += AxisValue * updown_speed;
 	}
 	if (GEngine)
 	{
@@ -153,7 +190,7 @@ void ABallGenerator::Decrease_Impulse(float AxisValue)
 {
 	if (impulse > 0)
 	{
-		impulse += AxisValue * 200.0f;
+		impulse += AxisValue * updown_speed;
 	}
 	if (GEngine)
 	{
@@ -191,3 +228,4 @@ void ABallGenerator::Escape()
 	FGenericPlatformMisc::RequestExit(false);
 	UE_LOG(LogTemp, Log, TEXT("Exit!"));
 }
+
