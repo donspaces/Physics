@@ -13,5 +13,5 @@ UCLASS()
 class PHYSICS_API APhysicsGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
-
+	
 };

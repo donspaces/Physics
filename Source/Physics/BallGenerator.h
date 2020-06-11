@@ -17,7 +17,7 @@ Date: Jun 4th, 2020 2:12 PM
 #include "Sound/SoundCue.h"
 #include "Components/AudioComponent.h"
 #include "Engine/DataTable.h"
-#include "PhysicsGameModeBase.h"
+#include "TimerComponent.h"
 #include "BallGenerator.generated.h"
 
 USTRUCT(BlueprintType)
@@ -44,7 +44,6 @@ class PHYSICS_API ABallGenerator : public APawn
 			UBoxComponent* Box;
 		UPROPERTY(VisibleAnywhere)
 			UParticleSystemComponent* Exploded;
-	
 
 	UColliderMovementComponent* MovementComponent;
 
@@ -54,10 +53,12 @@ class PHYSICS_API ABallGenerator : public APawn
 	
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Impulse")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impulse")
 		float impulse = 2000.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Impulse")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impulse")
 		int period = 260;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Score")
+		int score = 0;
 	UPROPERTY(EditAnywhere, Category = "Keyboard Control")
 		float move = 2000.0f;
 	UPROPERTY(EditAnywhere, Category = "Keyboard Control")
@@ -76,6 +77,9 @@ public:
 	FVector MyLocation;
 	FRotator MyRotation;
 
+	UUserWidget* ScoreBoard;
+	TSubclassOf<UUserWidget> ScoreBoardClass;
+
 public:	
 	// Sets default values for this actor's properties
 	ABallGenerator();
@@ -88,26 +92,29 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	//Generator Fuction, called when ball is generating
-	AExplodedBalls* generate(AActor* Actortype, FVector Location, FRotator Rotation = FRotator(0));
+	UFUNCTION(BlueprintCallable,Category="Gens")
+	AExplodedBalls* generate(AActor* Actortype, FVector Location);
 
 	//PawnMovementComponent, get MovementComponent when required
 	virtual UPawnMovementComponent* GetMovementComponent() const override;
+
+	UFUNCTION(BlueprintCallable, Category = "OnScreenMsg")
+	void print()
+	{
+		GEngine->AddOnScreenDebugMessage(2, MAX_FLT, FColor::Blue, FString::Printf(TEXT("Score:%d"), score));
+	}
 	
 	//Player Inputs
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	void Move_Foward(float AxisValue);
+	void Move_Backward(float AxisValue);
+	void Move_Left(float AxisValue);
 	void Move_Right(float AxisValue);
+	void Turn_Left(float AxisValue);
 	void Turn_Right(float AxisValue);
-
-	UFUNCTION(BlueprintCallable,Category="Gen_func")
-		void Increase_Impulse(float AxisValue);
-
-	UFUNCTION(BlueprintCallable, Category = "Gen_func")
-		void Increase_Period();
-
-	UFUNCTION(BlueprintCallable, Category = "Gen_func")
-		void Decrease_Period();
-
-	void Escape();
+	void Increase_Impulse(float AxisValue);
+	void Decrease_Impulse(float AxisValue);
+	void Increase_Period();
+	void Decrease_Period();
 	
 };

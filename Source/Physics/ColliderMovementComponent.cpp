@@ -25,10 +25,6 @@ void UColliderMovementComponent::TickComponent(float DeltaTime, ELevelTick TickT
 
 		FHitResult Hit;
 		SafeMoveUpdatedComponent(Movements, UpdatedComponent->GetComponentRotation(), true, Hit);
-
-		if (Hit.IsValidBlockingHit())
-		{
-			SlideAlongSurface(Movements, 1.0f - DeltaTime, Hit.Normal, Hit);
-		}
+		
 	}
 }

@@ -15,8 +15,8 @@ Date: Jun 4th, 2020 2:12 PM
 #include "Sound/SoundCue.h"
 #include "Components/AudioComponent.h"
 #include "Engine/DataTable.h"
-#include "PhysicsGameModeBase.h"
 #include "Engine/Engine.h"
+#include "TimerComponent.h"
 
 // Sets default values
 ABallGenerator::ABallGenerator()
@@ -95,6 +95,7 @@ ABallGenerator::ABallGenerator()
 	MovementComponent = CreateDefaultSubobject<UColliderMovementComponent>(TEXT("Movement Component"));
 	MovementComponent->UpdatedComponent = RootComponent;
 
+
 }
 
 // Called when the game starts or when spawned
@@ -113,6 +114,7 @@ void ABallGenerator::BeginPlay()
 	//Add Impulse and Period Info Disp
 	GEngine->AddOnScreenDebugMessage(0, MAX_FLT, FColor::Green, FString::Printf(TEXT("Impulse:%f"), impulse));
 	GEngine->AddOnScreenDebugMessage(1, MAX_FLT, FColor::Green, FString::Printf(TEXT("Period:%d"), period));
+	GEngine->AddOnScreenDebugMessage(2, MAX_FLT, FColor::Blue, FString::Printf(TEXT("Score:%d"), score));
 }
 
 // Called every frame
@@ -139,7 +141,7 @@ void ABallGenerator::Tick(float DeltaTime)
 }
 
 //Generator Fuction, called when ball is generating
-AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location, FRotator Rotation)
+AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location)
 {
 
 	AExplodedBalls* OtherBall = nullptr;
@@ -148,7 +150,7 @@ AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location, FR
 
 	if (IsValid(World))
 	{
-		OtherBall = World->SpawnActor<class AExplodedBalls>(Actortype->GetClass(), Location, Rotation);
+		OtherBall = World->SpawnActor<class AExplodedBalls>(Actortype->GetClass(), Location, FRotator(0));
 
 		UE_LOG(LogTemp, Log, TEXT("%s had been created!"), *OtherBall->GetName());
 
@@ -182,15 +184,17 @@ void ABallGenerator::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	InputComponent->BindAxis("FoB", this, &ABallGenerator::Move_Foward);
-	InputComponent->BindAxis("LR", this, &ABallGenerator::Move_Right);
-	InputComponent->BindAxis("LR_Turn", this, &ABallGenerator::Turn_Right);
-	InputComponent->BindAxis("Key_Updown", this, &ABallGenerator::Increase_Impulse);
+	InputComponent->BindAxis("Foward", this, &ABallGenerator::Move_Foward);
+	InputComponent->BindAxis("Backward", this, &ABallGenerator::Move_Foward);
+	InputComponent->BindAxis("Left", this, &ABallGenerator::Move_Right);
+	InputComponent->BindAxis("Right", this, &ABallGenerator::Move_Right);
+	InputComponent->BindAxis("Left_Turn", this, &ABallGenerator::Turn_Right);
+	InputComponent->BindAxis("Right_Turn", this, &ABallGenerator::Turn_Right);
+	InputComponent->BindAxis("Key_Up", this, &ABallGenerator::Increase_Impulse);
+	InputComponent->BindAxis("Key_Down", this, &ABallGenerator::Decrease_Impulse);
 
 	InputComponent->BindAction("Key_Left", IE_Pressed, this, &ABallGenerator::Decrease_Period);
 	InputComponent->BindAction("Key_Right", IE_Pressed, this, &ABallGenerator::Increase_Period);
-
-	InputComponent->BindAction("Exit", IE_Pressed, this, &ABallGenerator::Escape);
 
 }
 
@@ -225,10 +229,22 @@ void ABallGenerator::Turn_Right(float AxisValue)
 
 void ABallGenerator::Increase_Impulse(float AxisValue)
 {
+	if (impulse < 60000)
+	{
+		impulse += AxisValue * updown_speed;
+	}
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(0, 1.0f, FColor::Green, FString::Printf(TEXT("Impulse:%f"), impulse));
+	}
+}
 
-	impulse += AxisValue * updown_speed;
-	if (impulse < 0)impulse = 0;
-	if (impulse > 60000)impulse = 60000;
+void ABallGenerator::Decrease_Impulse(float AxisValue)
+{
+	if (impulse > 0)
+	{
+		impulse += AxisValue * updown_speed;
+	}
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(0, 1.0f, FColor::Green, FString::Printf(TEXT("Impulse:%f"), impulse));
@@ -257,11 +273,4 @@ void ABallGenerator::Increase_Period()
 	{
 		GEngine->AddOnScreenDebugMessage(1, MAX_FLT, FColor::Green, FString::Printf(TEXT("Period:%d"), period));
 	}
-}
-
-void ABallGenerator::Escape()
-{
-	//Post Endgame Request
-	FGenericPlatformMisc::RequestExit(false);
-	UE_LOG(LogTemp, Log, TEXT("Exit!"));
 }
