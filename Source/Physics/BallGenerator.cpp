@@ -12,6 +12,10 @@ Date: Jun 4th, 2020 2:12 PM
 #include "Math/UnrealMathUtility.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "Sound/SoundCue.h"
+#include "Components/AudioComponent.h"
+#include "Engine/DataTable.h"
+#include "PhysicsGameModeBase.h"
 #include "Engine/Engine.h"
 
 // Sets default values
@@ -20,21 +24,38 @@ ABallGenerator::ABallGenerator()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	//Add Box Collision RootComponent
 	Box = CreateDefaultSubobject<UBoxComponent>(TEXT("Box Collider"));
 	Box->SetBoxExtent(FVector(72.0f, 128.0f, 72.0f));
 	Box->SetCollisionProfileName(TEXT("Pawn"));
 	RootComponent = Box;
 
+	//Add Generator Mesh
 	Generator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Generator"));
 	Generator->SetupAttachment(RootComponent);
-	AutoPossessPlayer = EAutoReceiveInput::Player0;
-	bUseControllerRotationYaw = true;
+	AutoPossessPlayer = EAutoReceiveInput::Player0;//Setup PlayerControl
+	bUseControllerRotationYaw = true;//Enable RotationYaw
 
+	//Add Particle System
 	Exploded = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Exploded"));
 	Exploded->SetupAttachment(Generator);
 	Exploded->bAutoActivate = false;
 	Exploded->SetRelativeLocation(-GetActorRightVector() * 240.0f);
 
+	//Add Sound Cue
+	Exploded_Sound = CreateDefaultSubobject<UAudioComponent>(TEXT("Exploded Sound"));
+	Exploded_Sound->SetupAttachment(Generator);
+	Exploded_Sound->bAutoActivate = false;
+	Exploded_Sound->SetRelativeLocation(-GetActorRightVector() * 240.0f);
+
+	//Create Sound Cue Element
+	static ConstructorHelpers::FObjectFinder<USoundCue> ExplodedSoundCue(TEXT("/Game/StarterContent/Audio/Explosion_Cue.Explosion_Cue"));
+	if (Exploded_Sound->IsValidLowLevelFast() && ExplodedSoundCue.Succeeded())
+	{
+		Exploded_Sound->SetSound(ExplodedSoundCue.Object);
+	}
+
+	//Create Particle System Element
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> ExplodedParticles(TEXT("/Game/StarterContent/Particles/P_Explosion.P_Explosion"));
 	if (ExplodedParticles.Succeeded())
 	{
@@ -42,6 +63,7 @@ ABallGenerator::ABallGenerator()
 
 	}
 	
+	//Create Static Mesh Element
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Game/Meshes/Canon.Canon"));
 	if (CubeMesh.Succeeded())
 	{
@@ -51,6 +73,25 @@ ABallGenerator::ABallGenerator()
 		Generator->SetWorldRotation(FRotator(0, 180.0f, 0));
 	}
 
+	//Attach Datatable to Pawn
+	static ConstructorHelpers::FObjectFinder<UDataTable> DataTable(TEXT("/Game/StarterContent/Csv_archive/UserConfig.UserConfig"));
+	if (DataTable.Succeeded())
+	{
+		UserData = DataTable.Object;
+		UE_LOG(LogTemp, Log, TEXT("Finding data success!"));
+	}
+	
+	//Modify Raw Input Config
+	static const FString ContextString = TEXT("CSV");
+	FUserConfig* UserInfo = UserData->FindRow<FUserConfig>(TEXT("User0"), ContextString, true);
+	if (UserInfo)
+	{
+		move = UserInfo->move_config;
+		rotate = UserInfo->rotate_config;
+		updown_speed = UserInfo->updown_config;
+	}
+
+	//Add MovementComponent
 	MovementComponent = CreateDefaultSubobject<UColliderMovementComponent>(TEXT("Movement Component"));
 	MovementComponent->UpdatedComponent = RootComponent;
 
@@ -60,6 +101,8 @@ ABallGenerator::ABallGenerator()
 void ABallGenerator::BeginPlay()
 {
 	Super::BeginPlay();
+
+	//Ball Generation
 	UGameplayStatics::GetAllActorsWithTag(GetWorld(), TEXT("Balls"), BallGen);
 	BallGen.Add(nullptr);
 	Balls = BallGen[0];
@@ -67,6 +110,7 @@ void ABallGenerator::BeginPlay()
 	MyRotation = GetActorRotation();
 	Balls->SetActorHiddenInGame(true);
 
+	//Add Impulse and Period Info Disp
 	GEngine->AddOnScreenDebugMessage(0, MAX_FLT, FColor::Green, FString::Printf(TEXT("Impulse:%f"), impulse));
 	GEngine->AddOnScreenDebugMessage(1, MAX_FLT, FColor::Green, FString::Printf(TEXT("Period:%d"), period));
 }
@@ -76,6 +120,8 @@ void ABallGenerator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	fps += 1.0f;
+
+	//Create Exploded Balls
 	AExplodedBalls* NewBall = nullptr;
 	if (int(fps) % period == 0 && Balls != nullptr)
 	{
@@ -83,11 +129,16 @@ void ABallGenerator::Tick(float DeltaTime)
 		{
 			Exploded->ToggleActive();
 		}
+		if (Exploded_Sound && Exploded_Sound->Sound)
+		{
+			Exploded_Sound->Play();
+		}
 		NewBall = generate(Balls, MyLocation * FVector(1, 1, 0) + GetActorRightVector() * 200.0f);
 		NewBall->Ball->AddImpulse(GetActorRightVector() * impulse * 200.0f);
 	}
 }
 
+//Generator Fuction, called when ball is generating
 AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location, FRotator Rotation)
 {
 
@@ -119,24 +170,22 @@ AExplodedBalls* ABallGenerator::generate(AActor* Actortype, FVector Location, FR
 	return OtherBall;
 }
 
+//PawnMovementComponent, get MovementComponent when required
 UPawnMovementComponent* ABallGenerator::GetMovementComponent() const
 {
 	
 	return MovementComponent;
 }
 
+//Player Inputs
 void ABallGenerator::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	InputComponent->BindAxis("Foward", this, &ABallGenerator::Move_Foward);
-	InputComponent->BindAxis("Backward", this, &ABallGenerator::Move_Foward);
-	InputComponent->BindAxis("Left", this, &ABallGenerator::Move_Right);
-	InputComponent->BindAxis("Right", this, &ABallGenerator::Move_Right);
-	InputComponent->BindAxis("Left_Turn", this, &ABallGenerator::Turn_Right);
-	InputComponent->BindAxis("Right_Turn", this, &ABallGenerator::Turn_Right);
-	InputComponent->BindAxis("Key_Up", this, &ABallGenerator::Increase_Impulse);
-	InputComponent->BindAxis("Key_Down", this, &ABallGenerator::Decrease_Impulse);
+	InputComponent->BindAxis("FoB", this, &ABallGenerator::Move_Foward);
+	InputComponent->BindAxis("LR", this, &ABallGenerator::Move_Right);
+	InputComponent->BindAxis("LR_Turn", this, &ABallGenerator::Turn_Right);
+	InputComponent->BindAxis("Key_Updown", this, &ABallGenerator::Increase_Impulse);
 
 	InputComponent->BindAction("Key_Left", IE_Pressed, this, &ABallGenerator::Decrease_Period);
 	InputComponent->BindAction("Key_Right", IE_Pressed, this, &ABallGenerator::Increase_Period);
@@ -176,22 +225,10 @@ void ABallGenerator::Turn_Right(float AxisValue)
 
 void ABallGenerator::Increase_Impulse(float AxisValue)
 {
-	if (impulse < 60000)
-	{
-		impulse += AxisValue * updown_speed;
-	}
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(0, 1.0f, FColor::Green, FString::Printf(TEXT("Impulse:%f"), impulse));
-	}
-}
 
-void ABallGenerator::Decrease_Impulse(float AxisValue)
-{
-	if (impulse > 0)
-	{
-		impulse += AxisValue * updown_speed;
-	}
+	impulse += AxisValue * updown_speed;
+	if (impulse < 0)impulse = 0;
+	if (impulse > 60000)impulse = 60000;
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(0, 1.0f, FColor::Green, FString::Printf(TEXT("Impulse:%f"), impulse));
@@ -228,4 +265,3 @@ void ABallGenerator::Escape()
 	FGenericPlatformMisc::RequestExit(false);
 	UE_LOG(LogTemp, Log, TEXT("Exit!"));
 }
-

@@ -43,4 +43,3 @@ void AExplodedBalls::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	fps += 1.0f;
 }
-
