@@ -17,9 +17,16 @@ E - Turn Right
 Update in 1.7.12(Informal version):
 
  - Add canon model
+ - More keyboard controls:
+ 
+ Control:
+ Up/Down - +/- impulse
+ Left/Right - period
  
 ------------------------------------------------
 Update in 1.7.16:
 
  - Make canon movement more authentic. (Fixed the issue of canon which can get through the walls and objects)
+ - Added Explosion Effect.
+ - Reset the sensitivity of generator movement.
  
