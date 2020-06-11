@@ -13,3 +13,13 @@ Q - Turn Left
 E - Turn Right
 
 # Release 1.7.16
+
+Update in 1.7.12(Informal version):
+
+ - Add canon model
+ 
+------------------------------------------------
+Update in 1.7.16:
+
+ - Make canon movement more authentic. (Fixed the issue of canon which can get through the walls and objects)
+ 
