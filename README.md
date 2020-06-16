@@ -1,6 +1,13 @@
 # Physics
 An unreal project which simulates the motion of a bouncing ball in imaginative condition.
 
+# Public Release 2.3.1
+Add some random generated glass. The players should shoot at the glass in order to win scores. Each game is only 1 min 30 sec long. 
+
+Add some UIs. Fix some existing bugs like floating pawns and overlapped screens.
+
+Used the APEX plugins to simulate fragmented glass.
+
 # Release 1.7.16
 
 Update in 1.7.12(Informal version):
